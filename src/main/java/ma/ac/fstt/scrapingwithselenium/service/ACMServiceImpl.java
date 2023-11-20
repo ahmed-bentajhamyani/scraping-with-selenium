@@ -32,7 +32,7 @@ public class ACMServiceImpl implements ACMService {
         List<Response> links = new ArrayList<Response>();
         List<String> urls = new ArrayList<String>();
 
-        List<String> offsets = Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
+        List<String> offsets = Arrays.asList("23", "24", "25", "26", "27", "28", "29", "30", "31", "32");
         for(int i=0; i<offsets.size(); i++) {
             urls.add("https://dl.acm.org/action/doSearch?AllField=Blockchain&startPage="+offsets.get(i)+"&pageSize=50");
         }
@@ -89,22 +89,38 @@ public class ACMServiceImpl implements ACMService {
                 try {
                     WebElement date = driver.findElement(By.className("epub-section__date"));
                     String[] dates = date.getText().split(" ");
-                    article.setYear(dates[dates.length - 1].trim());
-                    article.setMonth(dates[dates.length - 2].trim());
+                    if (dates.length > 0) article.setYear(dates[dates.length - 1].trim());
+                    if (dates.length > 1) article.setMonth(dates[dates.length - 2].trim());
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     WebElement doi = driver.findElement(By.className("issue-item__doi"));
                     article.setDoi(doi.getText());
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     List<WebElement> authors = driver.findElements(By.className("loa__author-name"));
                     authors.forEach(author -> {
                         auths.add(author.findElement(By.tagName("span")).getText());
                     });
                     article.setAuthors(auths);
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     WebElement button = driver.findElement(By.className("loa__link"));
                     button.sendKeys(Keys.ENTER);
                     Thread.sleep(10000);
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     List<WebElement> universeties = driver.findElements(By.className("auth-info"));
                     universeties.forEach(unv -> {
                         if(unv.findElements(By.tagName("span")).size() >1) {
@@ -117,14 +133,22 @@ public class ACMServiceImpl implements ACMService {
 
                     univs.forEach(univ -> {
                         String[] parts = univ.split(",");
-                        coutries.add(parts[parts.length - 1].trim());
+                        if(parts.length > 0) coutries.add(parts[parts.length - 1].trim());
                     });
                     article.setCountries(coutries);
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     WebElement button2 = driver.findElement(By.id("pill-information__contentcon"));
                     button2.sendKeys(Keys.ENTER);
                     Thread.sleep(10000);
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     List<WebElement> flexContainers = driver.findElement(By.className("cover-image__details-extra"))
                             .findElements(By.className("flex-container"));
 
@@ -134,15 +158,18 @@ public class ACMServiceImpl implements ACMService {
                     } else {
                         System.out.println("No flex containers found");
                     }
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
+                }
 
+                try {
                     List<WebElement> elms = driver.findElements(By.className("badge-type"));
                     elms.forEach(elm -> {
                         keywords.add(elm.getText());
                     });
                     article.setKeywords(keywords);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                } catch (Exception e) {
+                    System.out.println("An error occurred: " + e.getMessage());
                 }
 
                 article.setJournal("ACM");
