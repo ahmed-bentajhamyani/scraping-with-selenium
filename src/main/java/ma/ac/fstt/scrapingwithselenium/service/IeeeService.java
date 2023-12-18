@@ -1,11 +1,11 @@
 package ma.ac.fstt.scrapingwithselenium.service;
 
+import ma.ac.fstt.scrapingwithselenium.models.ArticleDetails;
 import ma.ac.fstt.scrapingwithselenium.models.Article;
-import ma.ac.fstt.scrapingwithselenium.models.Response;
 
 import java.util.List;
 
 public interface IeeeService {
-    List<Response> extractArticles();
-    List<Article> extractArticlesDetails();
+    List<Article> extractArticles();
+    List<ArticleDetails> extractArticlesDetails();
 }

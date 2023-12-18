@@ -1,7 +1,7 @@
 package ma.ac.fstt.scrapingwithselenium.service;
 
+import ma.ac.fstt.scrapingwithselenium.models.ArticleDetails;
 import ma.ac.fstt.scrapingwithselenium.models.Article;
-import ma.ac.fstt.scrapingwithselenium.models.Response;
 import ma.ac.fstt.scrapingwithselenium.repository.ScrapeRepository;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -23,12 +23,12 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
     private ScrapeRepository scrapeRepository;
 
     @Override
-    public List<Response> extractArticles(){
+    public List<Article> extractArticles(){
         System.setProperty("webdriver.chrome.driver", env.getProperty("webdriver"));
         ChromeOptions options = new ChromeOptions();
         WebDriver driver = new ChromeDriver(options);
 
-        List<Response> links = new ArrayList<Response>();
+        List<Article> links = new ArrayList<Article>();
         List<String> urls = new ArrayList<String>();
         List<String> offsets = Arrays.asList("0","25","50","75","100","125","150");
 
@@ -37,12 +37,12 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
         }
 
         for(int j=0; j<urls.size(); j++) {
-            this.loadPage(driver, urls.get(j), "SD");
+            this.loadPage(driver, urls.get(j));
 
             List<WebElement> elements = driver.findElements(By.className("result-list-title-link"));
 
             elements.forEach(element -> {
-                Response res = new Response();
+                Article res = new Article();
 
                 if(this.exists(element.getText())) {
                     System.out.println("Already exists in DB");
@@ -58,8 +58,8 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
     }
 
     @Override
-    public List<Article> extractArticlesDetails() {
-        List<Response> links = this.extractArticles();
+    public List<ArticleDetails> extractArticlesDetails() {
+        List<Article> links = this.extractArticles();
         if(links.isEmpty()) {
             System.out.println("There is no new data");
             return null;
@@ -68,10 +68,10 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
             ChromeOptions options = new ChromeOptions();
             WebDriver driver = new ChromeDriver(options);
             List<String> urls = new ArrayList<String>();
-            List<Article> articles = new ArrayList<Article>();
+            List<ArticleDetails> articles = new ArrayList<ArticleDetails>();
 
             links.forEach(link -> {
-                this.loadPages(driver,link.getUrl(),"SD");
+                this.loadPage(driver, link.getUrl());
                 urls.add(link.getUrl());
 
                 WebElement issn = driver.findElement(By.className("publication-title-link"));
@@ -97,23 +97,23 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
                 List<WebElement> universeties = driver.findElements(By.className("affiliation"));
                 WebElement date = driver.findElement(By.tagName("p"));
 
-                Article article = new Article();
-                article.setTitle(elt.getText());
+                ArticleDetails articleDetails = new ArticleDetails();
+                articleDetails.setTitle(elt.getText());
 
                 List<String> keywords=new ArrayList<String>();
-                Set<String> univs=new HashSet<String>();
+                List<String> univs=new ArrayList<String>();
                 elms.forEach(elm -> {
                     keywords.add(elm.getText());
                 });
-                article.setKeywords(keywords);
+                articleDetails.setKeywords(keywords);
 
 
                 universeties.forEach(unv -> {
                     univs.add(unv.findElement(By.tagName("dd")).getText());
 
                 });
-                article.setAuthors(auths);
-                article.setUniverseties(univs);
+                articleDetails.setAuthors(auths);
+                articleDetails.setUniverseties(univs);
 
                 String[] splits = date.getText().split(",");
                 String datePub=null;
@@ -128,12 +128,12 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
                 String[] tokens = datePub.split(" ");
                 dateTrue=tokens[tokens.length - 3]+" "+tokens[tokens.length - 2]+" "+tokens[tokens.length - 1];
 
-                article.setIssn(issn.getText());
-                article.setYear(dateTrue);
-                article.setJournal("SD");
-                article.setDoi(doi.getText());
-                articles.add(article);
-                scrapeRepository.save(article);
+                articleDetails.setIssn(issn.getText());
+                articleDetails.setYear(dateTrue);
+                articleDetails.setJournal("SD");
+                articleDetails.setDoi(doi.getText());
+                articles.add(articleDetails);
+                scrapeRepository.save(articleDetails);
             });
 
             driver.close();
@@ -142,17 +142,7 @@ public class ScienceDirectServiceImpl implements ScienceDirectService {
         }
     }
 
-    boolean loadPages(WebDriver driver, String url, String journal) {
-        driver.get(url);
-        try {
-            Thread.sleep(3000);  // Let the user actually see something!
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        return true;
-    }
-
-    boolean loadPage(WebDriver driver, String url, String journal){
+    boolean loadPage(WebDriver driver, String url){
         driver.get(url);
 
         try {

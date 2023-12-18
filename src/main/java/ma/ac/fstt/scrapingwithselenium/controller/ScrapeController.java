@@ -1,9 +1,10 @@
 package ma.ac.fstt.scrapingwithselenium.controller;
 
+import ma.ac.fstt.scrapingwithselenium.models.ArticleDetails;
 import ma.ac.fstt.scrapingwithselenium.models.Article;
-import ma.ac.fstt.scrapingwithselenium.models.Response;
 import ma.ac.fstt.scrapingwithselenium.service.ACMService;
 import ma.ac.fstt.scrapingwithselenium.service.IeeeService;
+import ma.ac.fstt.scrapingwithselenium.service.QuartileService;
 import ma.ac.fstt.scrapingwithselenium.service.ScienceDirectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,37 +22,45 @@ public class ScrapeController {
     ACMService acmService;
     @Autowired
     IeeeService ieeeService;
+    @Autowired
+    QuartileService quartileService;
 
-    @GetMapping("/dataSD")
-    public List<Response> getData(){
+    @GetMapping("/sciencedirect")
+    public List<Article> getDataSD(){
         return scienceDirectService.extractArticles();
     }
 
     @GetMapping("/sd-scraper")
     @Scheduled(cron = "0 0 12 * * 0")
-    public List<Article> getDetails(){
+    public List<ArticleDetails> getDetailsSD(){
         return scienceDirectService.extractArticlesDetails();
     }
 
-    @GetMapping("/dataAcm")
-    public List<Response> getDataAcm(){
+    @GetMapping("/acm")
+    public List<Article> getDataAcm(){
         return acmService.extractArticles();
     }
 
     @GetMapping("/acm-scraper")
     @Scheduled(cron = "0 0 14 * * 0")
-    public List<Article> getDetailsAcm(){
+    public List<ArticleDetails> getDetailsAcm(){
         return acmService.extractArticlesDetails();
     }
 
-    @GetMapping("/dataIeee")
-    public List<Response> getDataIeee(){
+    @GetMapping("/ieee")
+    public List<Article> getDataIeee(){
         return ieeeService.extractArticles();
     }
 
     @GetMapping("/ieee-scraper")
     @Scheduled(cron = "0 0 16 * * 0")
-    public List<Article> getDetailsIeee(){
+    public List<ArticleDetails> getDetailsIeee(){
         return ieeeService.extractArticlesDetails();
+    }
+
+    @GetMapping("/article-quartile")
+    @Scheduled(cron = "0 0 16 * * 0")
+    public List<ArticleDetails> getArticlesQuartile(){
+        return quartileService.extractArticlesQuartile();
     }
 }

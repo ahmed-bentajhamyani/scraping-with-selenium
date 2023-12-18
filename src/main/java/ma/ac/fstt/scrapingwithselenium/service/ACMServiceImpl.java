@@ -1,7 +1,7 @@
 package ma.ac.fstt.scrapingwithselenium.service;
 
+import ma.ac.fstt.scrapingwithselenium.models.ArticleDetails;
 import ma.ac.fstt.scrapingwithselenium.models.Article;
-import ma.ac.fstt.scrapingwithselenium.models.Response;
 import ma.ac.fstt.scrapingwithselenium.repository.ScrapeRepository;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -24,12 +24,12 @@ public class ACMServiceImpl implements ACMService {
     private ScrapeRepository scrapeRepository;
 
     @Override
-    public List<Response> extractArticles() {
+    public List<Article> extractArticles() {
         System.setProperty("webdriver.chrome.driver", env.getProperty("webdriver"));
         ChromeOptions options = new ChromeOptions();
         WebDriver driver = new ChromeDriver(options);
 
-        List<Response> links = new ArrayList<Response>();
+        List<Article> links = new ArrayList<Article>();
         List<String> urls = new ArrayList<String>();
 
         List<String> offsets = Arrays.asList("23", "24", "25", "26", "27", "28", "29", "30", "31", "32");
@@ -37,12 +37,12 @@ public class ACMServiceImpl implements ACMService {
             urls.add("https://dl.acm.org/action/doSearch?AllField=Blockchain&startPage="+offsets.get(i)+"&pageSize=50");
         }
         for(int j=0; j<urls.size(); j++) {
-            this.loadPage(driver,urls.get(j),"ACM");
+            this.loadPage(driver,urls.get(j));
 
             List<WebElement> elements = driver.findElements(By.className("hlFld-Title"));
 
             elements.forEach(element -> {
-                Response res = new Response();
+                Article res = new Article();
                 if(this.exists(element.getText())) {
                     System.out.println("Already exists in DB");
                 }else {
@@ -59,8 +59,8 @@ public class ACMServiceImpl implements ACMService {
     }
 
     @Override
-    public List<Article> extractArticlesDetails() {
-        List<Response> links = this.extractArticles();
+    public List<ArticleDetails> extractArticlesDetails() {
+        List<Article> links = this.extractArticles();
 
         if(links.isEmpty()) {
             System.out.println("There is no new data");
@@ -72,32 +72,32 @@ public class ACMServiceImpl implements ACMService {
             WebDriver driver = new ChromeDriver(options);
 
             List<String> urls = new ArrayList<String>();
-            List<Article> articles = new ArrayList<Article>();
+            List<ArticleDetails> articles = new ArrayList<ArticleDetails>();
 
             links.forEach(link -> {
-                this.loadPages(driver, link.getUrl(), "ACM");
+                this.loadPage(driver, link.getUrl());
                 urls.add(link.getUrl());
 
-                Article article = new Article();
-                article.setTitle(link.getTitle());
+                ArticleDetails articleDetails = new ArticleDetails();
+                articleDetails.setTitle(link.getTitle());
 
-                Set<String> univs = new HashSet<String>();
+                List<String> univs = new ArrayList<String>();
                 List<String> auths = new ArrayList<String>();
                 List<String> keywords = new ArrayList<String>();
-                Set<String> coutries = new HashSet<String>();
+                List<String> coutries = new ArrayList<String>();
 
                 try {
                     WebElement date = driver.findElement(By.className("epub-section__date"));
                     String[] dates = date.getText().split(" ");
-                    if (dates.length > 0) article.setYear(dates[dates.length - 1].trim());
-                    if (dates.length > 1) article.setMonth(dates[dates.length - 2].trim());
+                    if (dates.length > 0) articleDetails.setYear(dates[dates.length - 1].trim());
+                    if (dates.length > 1) articleDetails.setMonth(dates[dates.length - 2].trim());
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
 
                 try {
                     WebElement doi = driver.findElement(By.className("issue-item__doi"));
-                    article.setDoi(doi.getText());
+                    articleDetails.setDoi(doi.getText());
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
@@ -107,7 +107,7 @@ public class ACMServiceImpl implements ACMService {
                     authors.forEach(author -> {
                         auths.add(author.findElement(By.tagName("span")).getText());
                     });
-                    article.setAuthors(auths);
+                    articleDetails.setAuthors(auths);
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
@@ -129,13 +129,13 @@ public class ACMServiceImpl implements ACMService {
                             univs.add(unv.findElement(By.tagName("span")).findElement(By.tagName("p")).getText());
                         }
                     });
-                    article.setUniverseties(univs);
+                    articleDetails.setUniverseties(univs);
 
                     univs.forEach(univ -> {
                         String[] parts = univ.split(",");
                         if(parts.length > 0) coutries.add(parts[parts.length - 1].trim());
                     });
-                    article.setCountries(coutries);
+                    articleDetails.setCountries(coutries);
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
@@ -154,7 +154,7 @@ public class ACMServiceImpl implements ACMService {
 
                     if (!flexContainers.isEmpty()) {
                         WebElement issn = flexContainers.get(0).findElement(By.className("space"));
-                        article.setIssn(issn.getText());
+                        articleDetails.setIssn(issn.getText());
                     } else {
                         System.out.println("No flex containers found");
                     }
@@ -167,15 +167,15 @@ public class ACMServiceImpl implements ACMService {
                     elms.forEach(elm -> {
                         keywords.add(elm.getText());
                     });
-                    article.setKeywords(keywords);
+                    articleDetails.setKeywords(keywords);
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
 
-                article.setJournal("ACM");
+                articleDetails.setJournal("ACM");
 
-                articles.add(article);
-                scrapeRepository.save(article);
+                articles.add(articleDetails);
+                scrapeRepository.save(articleDetails);
             });
 
             driver.close();
@@ -183,19 +183,8 @@ public class ACMServiceImpl implements ACMService {
         }
     }
 
-    boolean loadPages(WebDriver driver, String url, String journal) {
+    boolean loadPage(WebDriver driver, String url){
         driver.get(url);
-        try {
-            Thread.sleep(3000);  // Let the user actually see something!
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        return true;
-    }
-
-    boolean loadPage(WebDriver driver, String url, String journal){
-        driver.get(url);
-
         try {
             Thread.sleep(3000);  // Let the user see something!
         } catch (InterruptedException e) {

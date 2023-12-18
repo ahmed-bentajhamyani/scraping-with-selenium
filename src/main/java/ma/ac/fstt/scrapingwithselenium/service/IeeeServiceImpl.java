@@ -1,7 +1,7 @@
 package ma.ac.fstt.scrapingwithselenium.service;
 
+import ma.ac.fstt.scrapingwithselenium.models.ArticleDetails;
 import ma.ac.fstt.scrapingwithselenium.models.Article;
-import ma.ac.fstt.scrapingwithselenium.models.Response;
 import ma.ac.fstt.scrapingwithselenium.repository.ScrapeRepository;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -21,26 +21,26 @@ public class IeeeServiceImpl implements IeeeService {
     private ScrapeRepository scrapeRepository;
 
     @Override
-    public List<Response> extractArticles() {
+    public List<Article> extractArticles() {
         System.setProperty("webdriver.chrome.driver", env.getProperty("webdriver"));
         ChromeOptions options = new ChromeOptions();
         WebDriver driver = new ChromeDriver(options);
 
-        List<Response> links = new ArrayList<Response>();
+        List<Article> links = new ArrayList<Article>();
         List<String> urls = new ArrayList<String>();
 
         List<String> offsets = Arrays.asList("93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112");
         for(int i=0; i<offsets.size(); i++) {
-            urls.add("https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=Blockchain&highlight=true&returnType=SEARCH&matchPubs=true&refinements=ContentType:Journals&returnFacets=ALL&pageNumber="+offsets.get(i));
+            urls.add("https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=Blockchain&highlight=true&returnType=SEARCH&matchPubs=true&refinements=ContentType:Journals&returnFacets=ALL&pageNumber=" + offsets.get(i));
         }
 
         for(int j=0; j<urls.size(); j++) {
-            this.loadPage(driver, urls.get(j), "IEEE");
+            this.loadPage(driver, urls.get(j));
 
             List<WebElement> elements = driver.findElements(By.className("List-results-items"));
 
             elements.forEach(element -> {
-                Response res = new Response();
+                Article res = new Article();
 
                 if(this.exists(element.findElement(By.tagName("a")).getText())) {
                     System.out.println("Already exists in DB");
@@ -57,8 +57,8 @@ public class IeeeServiceImpl implements IeeeService {
     }
 
     @Override
-    public List<Article> extractArticlesDetails() {
-        List<Response> links=this.extractArticles();
+    public List<ArticleDetails> extractArticlesDetails() {
+        List<Article> links = this.extractArticles();
 
         if(links.isEmpty()) {
             System.out.println("There is no new data");
@@ -68,39 +68,39 @@ public class IeeeServiceImpl implements IeeeService {
             ChromeOptions options = new ChromeOptions();
             WebDriver driver = new ChromeDriver(options);
 
-            List<String> urls=new ArrayList<String>();
-            List<Article> articles=new ArrayList<Article>();
+            List<String> urls = new ArrayList<String>();
+            List<ArticleDetails> articles = new ArrayList<ArticleDetails>();
 
             links.forEach(link -> {
-                this.loadPages(driver, link.getUrl(), "IEEE");
+                this.loadPage(driver, link.getUrl());
                 urls.add(link.getUrl());
 
-                Article article = new Article();
+                ArticleDetails articleDetails = new ArticleDetails();
 
                 List<String> auths = new ArrayList<String>();
-                Set<String> univs = new HashSet<String>();
+                List<String> univs = new ArrayList<String>();
                 List<String> keywords = new ArrayList<String>();
-                Set<String> coutries = new HashSet<String>();
+                List<String> coutries = new ArrayList<String>();
 
                 try {
                     WebElement date = driver.findElement(By.className("doc-abstract-pubdate"));
                     String[] dates = date.getText().split(":")[1].trim().split(" ");
-                    if(dates.length > 0) article.setYear(dates[dates.length - 1].trim());
-                    if(dates.length > 1) article.setMonth(dates[dates.length - 2].trim());
+                    if(dates.length > 0) articleDetails.setYear(dates[dates.length - 1].trim());
+                    if(dates.length > 1) articleDetails.setMonth(dates[dates.length - 2].trim());
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
 
                 try {
                     WebElement elt = driver.findElement(By.className("document-title"));
-                    article.setTitle(elt.findElement(By.tagName("span")).getText());
+                    articleDetails.setTitle(elt.findElement(By.tagName("span")).getText());
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
 
                 try {
                     WebElement doi = driver.findElement(By.className("stats-document-abstract-doi")).findElement(By.tagName("a"));
-                    article.setDoi(doi.getText());
+                    articleDetails.setDoi(doi.getText());
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
@@ -116,14 +116,14 @@ public class IeeeServiceImpl implements IeeeService {
                         List<WebElement> issn = driver.findElement(By.className("abstract-metadata-indent")).findElements(By.tagName("div"));
                         for(int i=0; i<issn.size(); i++){
                             if(issn.get(i).getText().split(":")[0].contains("Electronic ISSN")){
-                                article.setIssn(issn.get(i).getText().split(":")[1].trim());
+                                articleDetails.setIssn(issn.get(i).getText().split(":")[1].trim());
                                 break;
                             }
                         }
 
                     } else {
                         WebElement issn = driver.findElements(By.className("col-6")).get(0).findElements(By.className("u-pb-1")).get(2).findElement(By.tagName("div")).findElement(By.tagName("div"));
-                        article.setIssn(issn.getText().split(":")[1]);
+                        articleDetails.setIssn(issn.getText().split(":")[1]);
                     }
                     Thread.sleep(10000);
                 } catch (Exception e) {
@@ -142,7 +142,7 @@ public class IeeeServiceImpl implements IeeeService {
                     authors.forEach(author -> {
                         auths.add(author.findElement(By.tagName("a")).getText());
                     });
-                    article.setAuthors(auths);
+                    articleDetails.setAuthors(auths);
 
                     authors.forEach(author -> {
                         List<WebElement> data = author.findElement(By.className("author-card")).findElement(By.className("row")).findElements(By.tagName("div"));
@@ -156,13 +156,13 @@ public class IeeeServiceImpl implements IeeeService {
 
                         }
                     });
-                    article.setUniverseties(univs);
+                    articleDetails.setUniverseties(univs);
 
                     univs.forEach(univ -> {
                         String[] parts = univ.split(",");
                         if(parts.length > 0) coutries.add(parts[parts.length - 1].trim());
                     });
-                    article.setCountries(coutries);
+                    articleDetails.setCountries(coutries);
                 } catch (Exception e) {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
@@ -178,7 +178,7 @@ public class IeeeServiceImpl implements IeeeService {
                         statsKeywords.forEach(elm -> {
                             keywords.add(elm.getAttribute("data-tealium_data").split("\"keyword:\"")[0].replace("}","").replace("\"","").split(",")[1].split(":")[1]);
                         });
-                        article.setKeywords(keywords);
+                        articleDetails.setKeywords(keywords);
                     } else {
                         System.out.println("No elements with class 'doc-keywords-list-item' found.");
                     }
@@ -186,10 +186,10 @@ public class IeeeServiceImpl implements IeeeService {
                     System.out.println("An error occurred: " + e.getMessage());
                 }
 
-                article.setJournal("IEEE");
+                articleDetails.setJournal("IEEE");
 
-                articles.add(article);
-                scrapeRepository.save(article);
+                articles.add(articleDetails);
+                scrapeRepository.save(articleDetails);
             });
 
             driver.close();
@@ -197,19 +197,8 @@ public class IeeeServiceImpl implements IeeeService {
         }
     }
 
-    boolean loadPages(WebDriver driver, String url, String journal) {
+    boolean loadPage(WebDriver driver, String url){
         driver.get(url);
-        try {
-            Thread.sleep(3000);  // Let the user actually see something!
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        return true;
-    }
-
-    boolean loadPage(WebDriver driver, String url, String journal){
-        driver.get(url);
-
         try {
             Thread.sleep(3000);  // Let the user see something!
         } catch (InterruptedException e) {
